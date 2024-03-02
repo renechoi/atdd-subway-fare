@@ -4,12 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import nextstep.api.auth.domain.dto.UserPrincipal;
 
@@ -17,11 +18,10 @@ import nextstep.api.auth.domain.dto.UserPrincipal;
  * @author : Rene Choi
  * @since : 2024/02/28
  */
-@ExtendWith(MockitoExtension.class)
 class FareCalculatorTest {
 
-	@InjectMocks
-	private FareCalculator fareCalculator;
+
+	private FareCalculator fareCalculator = new FareCalculator();
 
 
 	@Test
@@ -39,20 +39,26 @@ class FareCalculatorTest {
 		assertEquals(expectedFare, fare);
 	}
 
-	@Test
+	@ParameterizedTest
+	@MethodSource("provideAgesAndExpectedFares")
 	@DisplayName("로그인 사용자에 대한 나이별 할인 요금 계산")
-	void testCalculateFareWithLineChargesWithAuthUser() {
+	void testCalculateFareWithLineChargesWithAuthUser(long distance, List<Long> lineIds, int age, int expectedFare) {
 		// Given
-		long distance = 25;
-		List<Long> lineIds = Arrays.asList(1L, 2L);
-		UserPrincipal userPrincipal = UserPrincipal.builder().age(16).build();
+		UserPrincipal userPrincipal = UserPrincipal.builder().age(age).build();
 
 		// When
 		int fare = fareCalculator.calculateFareWithLineChargesWithAuthUser(distance, lineIds, userPrincipal);
 
 		// Then
-		int expectedFare = (int) Math.round((1250 + 100 * 3 + 500 - 350) * 0.8);
 		assertEquals(expectedFare, fare);
+	}
+
+	static Stream<Arguments> provideAgesAndExpectedFares() {
+		return Stream.of(
+			Arguments.of(25, Arrays.asList(1L, 2L), 16, (int) Math.round((1250 + 100 * 3 + 500 - 350) * 0.8)),
+			Arguments.of(25, Arrays.asList(1L, 2L), 12, (int) Math.round((1250 + 100 * 3 + 500 - 350) * 0.5)),
+			Arguments.of(25, Arrays.asList(1L, 2L), 20, 1250 + 100 * 3 + 500)
+		);
 	}
 
 	@Test
